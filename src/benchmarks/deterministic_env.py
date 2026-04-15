@@ -490,7 +490,10 @@ class OrbitalBenchmarkEnv:
         -------
         EventStream
         """
-        from ..data_pipeline.orbital_to_events import OrbitalToEvents
+        try:
+            from ..data_pipeline.orbital_to_events import OrbitalToEvents
+        except ImportError:
+            from data_pipeline.orbital_to_events import OrbitalToEvents
 
         converter = OrbitalToEvents(
             sensor_width=self.sensor_width,
