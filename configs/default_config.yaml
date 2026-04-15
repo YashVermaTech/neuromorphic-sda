@@ -1,0 +1,179 @@
+# ============================================================
+# Neuromorphic SDA — Default Configuration
+# Author: Yash Verma | TU Darmstadt Aerospace Engineering
+# ============================================================
+
+project:
+  name: "neuromorphic-sda"
+  version: "0.1.0"
+  seed: 42
+  device: "auto"  # "auto" | "cpu" | "cuda" | "mps"
+  output_dir: "outputs"
+  log_level: "INFO"
+
+# ============================================================
+# Event Camera / v2e Conversion Parameters
+# ============================================================
+event_camera:
+  # Contrast sensitivity thresholds (log intensity change)
+  threshold_pos: 0.15        # Positive event threshold (ON events)
+  threshold_neg: 0.15        # Negative event threshold (OFF events)
+  threshold_sigma: 0.03      # Threshold variation (sensor mismatch)
+
+  # Temporal parameters
+  refractory_period_us: 1.0  # Refractory period in microseconds
+  leak_rate_hz: 0.1          # Leakage rate for potential decay
+
+  # Noise parameters
+  shot_noise_rate_hz: 0.5    # Shot noise event rate per pixel per second
+  leak_noise_rate_hz: 0.1    # Leak noise rate per pixel per second
+  cutoff_hz: 300.0           # Low-pass filter cutoff (Hz)
+
+  # Resolution
+  sensor_width: 346          # DAVIS346 default width (pixels)
+  sensor_height: 260         # DAVIS346 default height (pixels)
+
+  # Output format
+  output_format: "numpy"     # "numpy" | "aedat4" | "hdf5"
+  timestamp_resolution_us: 1.0
+
+# ============================================================
+# GAN Noise Model Parameters
+# ============================================================
+gan:
+  latent_dim: 100
+  image_size: 64
+  channels: 1
+  generator_features: 64
+  discriminator_features: 64
+  learning_rate_g: 0.0002
+  learning_rate_d: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  batch_size: 64
+  n_epochs: 200
+  n_critic: 1              # Discriminator updates per generator update
+  lambda_gp: 10.0          # Gradient penalty weight (WGAN-GP)
+  noise_types:
+    - cosmic_ray
+    - dark_current
+    - readout_noise
+    - hot_pixels
+
+  # Orbital parameters for noise scaling
+  orbital:
+    leo_altitude_km: 500
+    meo_altitude_km: 20000
+    geo_altitude_km: 35786
+    van_allen_factor: 1.5   # Radiation enhancement near Van Allen belts
+
+# ============================================================
+# SNN Detector Parameters
+# ============================================================
+snn:
+  # Architecture
+  input_size: [2, 260, 346]  # [polarity_channels, height, width]
+  time_steps: 25             # Simulation time steps
+  hidden_channels: [32, 64, 128, 256]
+  kernel_size: 3
+  stride: 1
+  padding: 1
+
+  # LIF neuron parameters
+  lif:
+    beta: 0.9                # Membrane potential decay factor
+    threshold: 1.0           # Firing threshold
+    reset_mechanism: "subtract"  # "subtract" | "zero"
+    learn_beta: false
+    learn_threshold: false
+
+  # Detection head
+  num_classes: 2             # [background, satellite]
+  anchor_sizes: [[8, 16], [16, 32], [32, 64]]
+  confidence_threshold: 0.5
+  nms_iou_threshold: 0.3
+
+  # Training
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 5
+  max_epochs: 100
+  batch_size: 16
+  gradient_clip: 1.0
+
+  # Loss weights
+  loss:
+    classification: 1.0
+    localization: 2.0
+    spike_regularization: 0.01
+
+# ============================================================
+# Star Tracker Parameters
+# ============================================================
+star_tracker:
+  # Detection
+  event_window_ms: 10.0      # Time window for event accumulation
+  min_cluster_size: 3        # Minimum events per star cluster
+  max_cluster_radius_px: 5   # Maximum cluster radius in pixels
+  magnitude_limit: 6.5       # Limiting star magnitude
+
+  # Kalman filter
+  kalman:
+    process_noise_std: 0.1
+    measurement_noise_std: 0.5
+    dt: 0.01                 # Time step (seconds)
+
+  # Catalog matching
+  catalog:
+    database: "hyg"          # "hyg" | "tycho2"
+    max_stars: 500
+    match_radius_arcsec: 30.0
+    fov_deg: 20.0
+
+  # Satellite discrimination
+  satellite:
+    min_angular_velocity_arcsec_s: 10.0  # Min velocity to flag as satellite
+    max_angular_velocity_arcsec_s: 5000.0
+    trail_length_min_px: 5
+
+# ============================================================
+# Benchmark Parameters
+# ============================================================
+benchmark:
+  seed: 42
+  n_scenarios: 100
+  duration_s: 60.0
+
+  # Orbital scenarios
+  orbits:
+    leo:
+      altitude_km: 550
+      inclination_deg: 53.0
+      angular_velocity_deg_s: 0.5
+    meo:
+      altitude_km: 20200
+      inclination_deg: 55.0
+      angular_velocity_deg_s: 0.05
+    geo:
+      altitude_km: 35786
+      inclination_deg: 0.0
+      angular_velocity_deg_s: 0.0041
+
+  # Evaluation metrics
+  metrics:
+    iou_threshold: 0.5
+    confidence_threshold: 0.5
+    max_det_per_frame: 10
+
+# ============================================================
+# Visualization Parameters
+# ============================================================
+visualization:
+  event_colormap:
+    positive: "#00BFFF"      # Deep sky blue for ON events
+    negative: "#FF4500"      # Orange-red for OFF events
+  figure_dpi: 150
+  save_format: "png"
+  show_timestamps: true
+  accumulation_window_ms: 5.0
